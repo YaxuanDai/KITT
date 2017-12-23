@@ -7,7 +7,7 @@ import sys
 import os
 import RPi.GPIO as GPIO
 import numpy as np
-
+from lane_lines import *
 class Car:
     # settings
     IN3 = 11; IN4 = 12; IN1 = 15; IN2 = 16
@@ -79,7 +79,7 @@ class Car:
                 self.right_duty = ((right_speed-self.halfR)*50/(self.fullR-self.halfR)+50);self.rightspeed = right_speed
             else :
                 self.right_duty = 0; self.rightspeed = 0
-        get_left_duty(left_speed)
+        get_left_duty(-left_speed)
         get_right_duty(right_speed)
         self.set_duty_cycle(self.left_duty, self.right_duty)
 
@@ -326,30 +326,6 @@ def selfcontrol(image_in):
         print('shit')
     line_img = np.zeros((*img.shape, 3), dtype=np.uint8)  # 3-channel RGB image
     newlines = draw_lines(line_img, lines)
-
-    # Draw lane lines on the original image
-    # initial_image = image_in.astype('uint8')
-    # annotated_image = weighted_img(line_image, initial_image)
-    def krate(line):
-        # compute the sign of the slop of the line
-        s = (line[0] - line[2]) * (line[1] - line[3])
-        return(np.sign(s))
-
-    def kratesum(newlines):
-        rsum = krate(newlines[0]) + krate(newlines[1])
-        return(rsum)
-
-    if abs(kratesum(newlines)) <= 0.5:
-        forward = 30
-        self.set_speed(forward, forward)
-    if kratesum(newlines) < -0.5:
-        left = 40
-        right = 30
-        self.set_speed(left, right)
-    if kratesum(newlines) > 0.5:
-        left = 30
-        right = 40
-        self.set_speed(left, right)
 
     return(newlines)
 

@@ -184,16 +184,15 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=10):
 	right_x2 = int(right_x2)
 	left_x1 = int(left_x1)
 	left_x2 = int(left_x2)
-
+  
 	# Draw the right and left lines on image
 	if draw_right:
 		cv2.line(img, (right_x1, y1), (right_x2, y2), color, thickness)
 	if draw_left:
 		cv2.line(img, (left_x1, y1), (left_x2, y2), color, thickness)
-
 	line_right = (right_x1, y1, right_x2, y2)
-    line_left = (left_x1, y1, left_x2, y2)
-    return (line_right, line_left)
+	line_left = (left_x1, y1, left_x2, y2)
+	return (line_right, line_left)
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
 	"""
@@ -279,11 +278,8 @@ def annotate_image_array(image_in):
 
 # Main script
 if __name__ == '__main__':
-
-	input_file = "./input_image.jpg"
-
-    input_image = mpimg.imread(input_file)
-    output_image = annotate_image_array(input_image)
-
-    output_file = "./output_image.jpg"
-	plt.imsave(output_file, output_image)
+  input_file = "./input_image.jpg"
+  input_image = mpimg.imread(input_file)
+  output_image = annotate_image_array(input_image)
+  output_file = "./output_image.jpg"
+  plt.imsave(output_file, output_image)

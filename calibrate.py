@@ -15,10 +15,10 @@ if __name__ == '__main__':
     d = np.zeros(sample_num); l = np.zeros(sample_num); r = np.zeros(sample_num);
 
     for i in range(sample_num):
-        car.set_duty_cycle((i+1)*((-1)**i)*30, (i+1)*((-1)**i)*30)
-        time.sleep(2)
+        car.set_duty_cycle(-(i+1)*((-1)**i)*30, (i+1)*((-1)**i)*30)
+        time.sleep(3)
         left1, right1 = encoder.get_speed()
-        time.sleep(1)
+        time.sleep(3)
         left2, right2 = encoder.get_speed()
         #~ #~
         d[i] = (i+1)*30
