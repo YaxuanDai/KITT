@@ -22,14 +22,20 @@ from car import Car
 from car import selfcontrol
 from lane_lines import *
 
+krate_sum=[10]
+
 def krate(line):
     # compute the sign of the slop of the line
     rate = (line[0] - line[2]) / (line[1] - line[3]) 
     return round(rate, 4)
 
 def kratesum(lines):
+    global krate_sum
     rsum = krate(lines[0]) + krate(lines[1])
-    return(rsum)
+    del krate_sum[0]
+    krate_sum.append(rsum)
+    result=np.fft.fft(krate_sum)
+    return(result)
 
 def change_speed(lines):
     try:
