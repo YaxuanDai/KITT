@@ -22,7 +22,7 @@ from car import Car
 from car import selfcontrol
 from lane_lines import *
 
-krate_sum=[10]
+krate_sum=[ 0 for i in range(10) ]
 
 def krate(line):
     # compute the sign of the slop of the line
@@ -37,6 +37,9 @@ def kratesum(lines):
     result=np.fft.fft(krate_sum)
     return(result)
 
+def kratesum(lines):
+    return krate(lines[0]) + krate(lines[1])
+
 def change_speed(lines):
     try:
         if abs(kratesum(lines)) <= 0.5:
@@ -44,9 +47,9 @@ def change_speed(lines):
             v2 = 40       
         if kratesum(lines) < -0.5:
             v1 = 60
-            v2 = -30
+            v2 = -60
         if kratesum(lines) > 0.5:
-            v1 = -30 
+            v1 = -60 
             v2 = 60
     except:
         v1 = v2 = 40
@@ -58,12 +61,12 @@ def forward(car):
     car.set_speed(0, 0)
 
 def find_left(car):
-    car.set_speed(60, -60)
+    car.set_speed(-60, 60)
     time.sleep(1)
     car.set_speed(0, 0)
 
-def find_left(car):
-    car.set_speed(-60, 60)
+def find_right(car):
+    car.set_speed(60, -60)
     time.sleep(1)
     car.set_speed(0, 0)
     
@@ -75,6 +78,7 @@ if __name__ == '__main__':
     # Camera warm-up time
     time.sleep(2)
     v1, v2 = 0, 0
+    print(krate_sum)
     while 1:
         image = np.empty((640 * 480 * 3,), dtype=np.uint8)
         camera.capture(image, 'bgr')
@@ -82,10 +86,9 @@ if __name__ == '__main__':
         # TODD: Detect
         try:
             lines = selfcontrol(image)
-            print(krate(lines[0]), krate(lines[1]), v1, v2)
             v1, v2 = change_speed(lines)
+            print(krate(lines[0]), krate(lines[1]), v1, v2)
         except:
-            v1, v2 = 0, 0
-            print("Find Error")
+            print("Error")
         # TODO: ROS 
         car.set_speed(v1, v2)

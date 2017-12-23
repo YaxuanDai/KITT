@@ -79,7 +79,8 @@ class Car:
                 self.right_duty = ((right_speed-self.halfR)*50/(self.fullR-self.halfR)+50);self.rightspeed = right_speed
             else :
                 self.right_duty = 0; self.rightspeed = 0
-        get_left_duty(-left_speed)
+        left_speed = -1 * left_speed
+        get_left_duty(left_speed)
         get_right_duty(right_speed)
         self.set_duty_cycle(self.left_duty, self.right_duty)
 
@@ -130,18 +131,18 @@ class Car:
                             #~ self.set_duty_cycle(40,40)
                             print("forward")
                         elif c == "s":
-                            back = 30
+                            back = 140
                             self.set_speed(-back, -back)
                             #~ self.set_duty_cycle(-50,-50)
                             print("back")
                         elif c == "a":
                             left = 80
-                            self.set_speed(left, -left)
+                            self.set_speed(-left, left)
                             #~ self.set_duty_cycle(90,-90)
                             print("left")
                         elif c == "d":
                             right = 80
-                            self.set_speed(-right, right)
+                            self.set_speed(right, -right)
                             #~ self.set_duty_cycle(-50,50)
                             print("right")
                         elif c == "q":
@@ -222,7 +223,7 @@ class autoCar:
                 self.right_duty = ((right_speed-self.halfR)*50/(self.fullR-self.halfR)+50);self.rightspeed = right_speed
             else :
                 self.right_duty = 0; self.rightspeed = 0
-        get_left_duty(left_speed)
+        get_left_duty(-left_speed)
         get_right_duty(right_speed)
         self.set_duty_cycle(self.left_duty, self.right_duty)
 
@@ -273,7 +274,7 @@ class autoCar:
                             #~ self.set_duty_cycle(40,40)
                             print("forward")
                         elif c == "s":
-                            back = 30
+                            back = 140
                             self.set_speed(-back, -back)
                             #~ self.set_duty_cycle(-50,-50)
                             print("back")
@@ -326,7 +327,11 @@ def selfcontrol(image_in):
         print('shit')
     line_img = np.zeros((*img.shape, 3), dtype=np.uint8)  # 3-channel RGB image
     newlines = draw_lines(line_img, lines)
-
+    for line in newlines:
+        if line[1] < line[3]:
+            line[0], line[1], line[2], line[3] = line[2], line[3], line[0], line[1]
+    if newlines[0][0] > newlines[1][0]:
+        newlines[0], newlines[1] = newlines[1], newlines[0]
     return(newlines)
 
 if __name__ == '__main__':
