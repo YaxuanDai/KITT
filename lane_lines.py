@@ -193,7 +193,7 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=10):
 	
 	line_right = (right_x1, y1, right_x2, y2)
 	line_left = (left_x1, y1, left_x2, y2)
-	return (line_right, line_left)
+	return [line_right, line_left]
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
 	"""

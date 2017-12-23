@@ -19,10 +19,24 @@ import math
 import os
 
 from car import Car
-from car import selfcontrol
 from lane_lines import *
 
 krate_sum=[ 0 for i in range(10) ]
+
+def forward(car):
+    car.set_speed(60, 60)
+    time.sleep(0.1)
+    car.set_speed(0, 0)
+
+def find_left(car):
+    car.set_speed(-60, 60)
+    time.sleep(0.2)
+    car.set_speed(0, 0)
+
+def find_right(car):
+    car.set_speed(60, -60)
+    time.sleep(0.2)
+    car.set_speed(0, 0)
 
 def krate(line):
     # compute the sign of the slop of the line
@@ -40,14 +54,22 @@ def kratesum(lines):
 def kratesum(lines):
     return krate(lines[0]) + krate(lines[1])
 
-def stage_control(lines):
-    k = kratesum(lines)
-    if abs(k) <= 1:
-        v1, v2 = 40, 40       
-    elif k < -1:
+def stage_control(lines, car):
+    if lines!=None and len(lines)==2:
+        k = kratesum(lines)
+    else:
+        return -1, -1
+
+    if abs(k) <= 4:
+        forward(car)
+        v1, v2 = 60, 60
+    elif k < -4:
+        find_right(car)
         v1, v2 = 60, -60
-    elif k > 1:
+    elif k > 4:
+        find_left(car)
         v1, v2 = -60, 60
+    # car.set_speed(v1, v2)
     return v1, v2
 
 def stage_detect(image_in):
@@ -79,21 +101,6 @@ def stage_detect(image_in):
     if newlines[0][0] > newlines[1][0]:
         newlines[0], newlines[1] = newlines[1], newlines[0]
     return(newlines)
-
-def forward(car):
-    car.set_speed(60, 60)
-    time.sleep(3)
-    car.set_speed(0, 0)
-
-def find_left(car):
-    car.set_speed(-60, 60)
-    time.sleep(1)
-    car.set_speed(0, 0)
-
-def find_right(car):
-    car.set_speed(60, -60)
-    time.sleep(1)
-    car.set_speed(0, 0)
     
 if __name__ == '__main__':
     im_size = (640, 480)
@@ -109,16 +116,13 @@ if __name__ == '__main__':
         image = frame.array
         image = image.reshape((640, 480, 3))
         rawCapture.truncate(0)
-        key = cv2.waitKey(1) & 0xFF
-
-        # TODD: Detect
-        try:
-            lines = stage_detect(image)
-            v1, v2 = stage_control(lines)
-        except:
-            print("Error")
-        # TODO: ROS 
-        print v1, v2
-        car.set_speed(v1, v2)
-        if key==ord('q'):
-            break
+        lines = stage_detect(image)
+        v1, v2 = stage_control(lines, car)
+        # print(v1, v2)
+        if lines != None:
+            left, right = lines[0], lines[1]
+            if left[0] > right[0]:
+                left[0], right[0] = right[0], left[0]
+            print(left[0]/320, right[0]/320, v1, v2)
+        else:
+            print(-1, -1)
