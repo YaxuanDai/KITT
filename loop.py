@@ -22,10 +22,10 @@ from car import Car
 from car import selfcontrol
 from lane_lines import *
 
-def krate(lines):
+def krate(line):
     # compute the sign of the slop of the line
-    s = (lines[0] - lines[2]) * (lines[1] - lines[3])
-    return(np.sign(s))
+    rate = (line[0] - line[2]) / (line[1] - line[3]) 
+    return round(rate, 4)
 
 def kratesum(lines):
     rsum = krate(lines[0]) + krate(lines[1])
@@ -37,13 +37,13 @@ def change_speed(lines):
             v1 = 40
             v2 = 40       
         if kratesum(lines) < -0.5:
-            v1 = 120
-            v2 = -120
+            v1 = 60
+            v2 = -30
         if kratesum(lines) > 0.5:
-            v1 = -120 
-            v2 = 120
+            v1 = -30 
+            v2 = 60
     except:
-        v1 = v2 = 100
+        v1 = v2 = 40
     return v1, v2
 
 def forward(car):
@@ -76,10 +76,10 @@ if __name__ == '__main__':
         # TODD: Detect
         try:
             lines = selfcontrol(image)
+            print(krate(lines[0]), krate(lines[1]), v1, v2)
             v1, v2 = change_speed(lines)
-            print(kratesum(lines), v1, v2)
         except:
-            v1, v2 = -100, -100
-            print(v1, v2, "Find")
+            v1, v2 = 0, 0
+            print("Find Error")
         # TODO: ROS 
         car.set_speed(v1, v2)
