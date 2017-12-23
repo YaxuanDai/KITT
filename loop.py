@@ -30,14 +30,31 @@ def forward(car):
     car.set_speed(0, 0)
 
 def find_left(car):
-    car.set_speed(-80, 80)
-    time.sleep(0.2)
-    car.set_speed(60, 60)
+    car.set_speed(-100, 100)
+    time.sleep(0.15)
+    car.set_speed(50, 50)
 
 def find_right(car):
-    car.set_speed(80, -80)
+    car.set_speed(100, -100)
+    time.sleep(0.15)
+    car.set_speed(50, 50)
+
+def rush_left(car):
+    car.set_speed(-200, 200)
+    time.sleep(0.1)
+    car.set_speed(50, 50)
+
+def rush_right(car):
+    car.set_speed(-200, 200)
     time.sleep(0.2)
-    car.set_speed(60, 60)
+    car.set_speed(50, 50)
+    
+def set_slow(car):
+    car.set_speed(-80, -80)
+    time.sleep(0.25)
+    car.set_speed(-160, 160)
+    time.sleep(0.2)
+    car.set_speed(50, 50)
 
 def krate(line):
     # compute the sign of the slop of the line
@@ -110,20 +127,23 @@ if __name__ == '__main__':
   car.set_speed(v1, v2)
   try:
     while True:
-      left, right, new = inf.detect()
+      left, right, nl, nr = inf.detect()
       # print(left, right)
       left_ans = True if left else False
       right_ans = True if right else False
-      new_ans = True if new else False
-      print(str(left_ans) + ", " + str(right_ans) + ", " + str(new_ans))
-      if not left_ans:
+      new_left = True if nl else False
+      new_right = True if nr else False
+      print(str(left_ans) + ", " + str(right_ans) + ", " + str(new_left) + ', ' + str(new_right))
+      if not left_ans and right_ans and new_left and new_right:
         find_right(car)
-      if not right_ans:
+      elif not right_ans and left_ans and new_left and new_right:
         find_left(car)
-      if not new_ans:
-        print("Now is new detected")
-        car.set_speed(0, 0)
-        break
+      elif not new_left and new_right:
+        rush_left(car)
+      elif not new_right and new_left:
+        rush_right(car)
+      elif not new_left and not new_right:
+        set_slow(car)
   except KeyboardInterrupt:
     GPIO.cleanup()
 """
