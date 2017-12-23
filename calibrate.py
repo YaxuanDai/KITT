@@ -47,7 +47,3 @@ if __name__ == '__main__':
     print(line)
 
     np.savetxt("./settings.txt", line)
-
-
-
-

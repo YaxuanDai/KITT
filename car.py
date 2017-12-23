@@ -7,7 +7,7 @@ import sys
 import os
 import RPi.GPIO as GPIO
 import numpy as np
-from lane_lines import *
+
 class Car:
     # settings
     IN3 = 11; IN4 = 12; IN1 = 15; IN2 = 16
@@ -295,44 +295,6 @@ class autoCar:
 
         except KeyboardInterrupt:
             self.__del__()
-
-def selfcontrol(image_in):
-    image = filter_colors(image_in)
-
-    # Read in and grayscale the image
-    gray = grayscale(image)
-
-    # Apply Gaussian smoothing
-    blur_gray = gaussian_blur(gray, kernel_size)
-
-    # Apply Canny Edge Detector
-    edges = canny(blur_gray, low_threshold, high_threshold)
-
-    # Create masked edges using trapezoid-shaped region-of-interest
-    imshape = image.shape
-    vertices = np.array([[\
-        ((imshape[1] * (1 - trap_bottom_width)) // 2, imshape[0]),\
-        ((imshape[1] * (1 - trap_top_width)) // 2, imshape[0] - imshape[0] * trap_height),\
-        (imshape[1] - (imshape[1] * (1 - trap_top_width)) // 2, imshape[0] - imshape[0] * trap_height),\
-        (imshape[1] - (imshape[1] * (1 - trap_bottom_width)) // 2, imshape[0])]]\
-        , dtype=np.int32)
-    masked_edges = region_of_interest(edges, vertices)
-
-    # Run Hough on edge detected image
-    # line_image = hough_lines(masked_edges, rho, theta, threshold, min_line_length, max_line_gap)
-    img = masked_edges
-    min_line_len = min_line_length
-    lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len, maxLineGap=max_line_gap)
-    if lines is None:
-        print('shit')
-    line_img = np.zeros((*img.shape, 3), dtype=np.uint8)  # 3-channel RGB image
-    newlines = draw_lines(line_img, lines)
-    for line in newlines:
-        if line[1] < line[3]:
-            line[0], line[1], line[2], line[3] = line[2], line[3], line[0], line[1]
-    if newlines[0][0] > newlines[1][0]:
-        newlines[0], newlines[1] = newlines[1], newlines[0]
-    return(newlines)
 
 if __name__ == '__main__':
     car = autoCar()

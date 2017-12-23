@@ -186,10 +186,11 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=10):
 	left_x2 = int(left_x2)
   
 	# Draw the right and left lines on image
-	if draw_right:
-		cv2.line(img, (right_x1, y1), (right_x2, y2), color, thickness)
-	if draw_left:
-		cv2.line(img, (left_x1, y1), (left_x2, y2), color, thickness)
+	# if draw_right:
+	# 	cv2.line(img, (right_x1, y1), (right_x2, y2), color, thickness)
+	# if draw_left:
+	# 	cv2.line(img, (left_x1, y1), (left_x2, y2), color, thickness)
+	
 	line_right = (right_x1, y1, right_x2, y2)
 	line_left = (left_x1, y1, left_x2, y2)
 	return (line_right, line_left)
@@ -206,7 +207,7 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
 	# return line_img
 	return (newlines)
 
-def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
+def weighted_img(img, initial_img, alpha=0.8, beta=1.0, gama=0.):
 	"""
 	`img` is the output of the hough_lines(), An image with lines drawn on it.
 	Should be a blank image (all black) with lines drawn on it.
@@ -215,10 +216,10 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
 
 	The result image is computed as follows:
 
-	initial_img * α + img * β + λ
+	initial_img * alpha + img * beta + gama
 	NOTE: initial_img and img must be the same shape!
 	"""
-	return cv2.addWeighted(initial_img, α, img, β, λ)
+	return cv2.addWeighted(initial_img, alpha, img, beta, gama)
 
 def filter_colors(image):
 	"""
