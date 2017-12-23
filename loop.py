@@ -19,6 +19,7 @@ import math
 import os
 
 from car import Car
+from infrad import Infrad
 from lane_lines import *
 
 krate_sum=[ 0 for i in range(10) ]
@@ -29,14 +30,14 @@ def forward(car):
     car.set_speed(0, 0)
 
 def find_left(car):
-    car.set_speed(-60, 60)
+    car.set_speed(-80, 80)
     time.sleep(0.2)
-    car.set_speed(0, 0)
+    car.set_speed(60, 60)
 
 def find_right(car):
-    car.set_speed(60, -60)
+    car.set_speed(80, -80)
     time.sleep(0.2)
-    car.set_speed(0, 0)
+    car.set_speed(60, 60)
 
 def krate(line):
     # compute the sign of the slop of the line
@@ -103,13 +104,29 @@ def stage_detect(image_in):
     return(newlines)
     
 if __name__ == '__main__':
-    im_size = (640, 480)
-    car = Car()
-    camera = picamera.PiCamera()
-    camera.resolution = im_size
-    camera.start_preview()
-    time.sleep(2)
-
+  car = Car()
+  inf = Infrad()
+  v1, v2 = 60, 60
+  car.set_speed(v1, v2)
+  try:
+    while True:
+      left, right, new = inf.detect()
+      # print(left, right)
+      left_ans = True if left else False
+      right_ans = True if right else False
+      new_ans = True if new else False
+      print(str(left_ans) + ", " + str(right_ans) + ", " + str(new_ans))
+      if not left_ans:
+        find_right(car)
+      if not right_ans:
+        find_left(car)
+      if not new_ans:
+        print("Now is new detected")
+        car.set_speed(0, 0)
+        break
+  except KeyboardInterrupt:
+    GPIO.cleanup()
+"""
     v1, v2 = 0, 0
     rawCapture = picamera.array.PiRGBArray(camera, size = im_size)
     for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=True):
@@ -126,3 +143,4 @@ if __name__ == '__main__':
             print(left[0]/320, right[0]/320, v1, v2)
         else:
             print(-1, -1)
+"""
