@@ -9,6 +9,7 @@ import RPi.GPIO as GPIO
 import numpy as np
 import picamera
 import picamera.array
+from picamera import PiCamera
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import time
@@ -19,37 +20,61 @@ import threading
 from car import Car
 from infrad import Infrad
 from lane_lines import *
-from lamp import *
+from detect import *
 from ultrasonic import *
 
-STOP = False
+car = Car()
+inf = Infrad()
+ul = Ultrasound()
+camera = PiCamera()
 
-def find_left(car):
+def find_left(car, GO):
     car.set_speed(-100, 100)
     time.sleep(0.15)
-    car.set_speed(50, 50)
+    if GO:
+        car.set_speed(50, 50)
+    else:
+        car.set_speed(0, 0)
 
-def find_right(car):
+def find_right(car, GO):
     car.set_speed(100, -100)
     time.sleep(0.15)
-    car.set_speed(50, 50)
+    if GO:
+        car.set_speed(50, 50)
+    else:
+        car.set_speed(0, 0)
 
-def rush_left(car):
+def rush_left(car, GO):
     car.set_speed(-200, 200)
     time.sleep(0.1)
-    car.set_speed(50, 50)
+    if GO:
+        car.set_speed(50, 50)
+    else:
+        car.set_speed(0, 0)
 
-def rush_right(car):
+def rush_right(car, GO):
     car.set_speed(-200, 200)
     time.sleep(0.2)
-    car.set_speed(50, 50)
+    if GO:
+        car.set_speed(50, 50)
+    else:
+        car.set_speed(0, 0)
     
-def set_slow(car):
+def set_slow(car, GO):
     car.set_speed(-80, -80)
     time.sleep(0.25)
     car.set_speed(-160, 160)
     time.sleep(0.2)
-    car.set_speed(50, 50)
+    if GO:
+        car.set_speed(50, 50)
+    else:
+        car.set_speed(0, 0)
+
+def set_forward(car, GO):
+    if GO:
+        car.set_speed(50, 50)
+    else:
+        car.set_speed(0, 0)
 
 def stage_detect(image_in):
     image = filter_colors(image_in)
@@ -81,68 +106,78 @@ def stage_detect(image_in):
         newlines[0], newlines[1] = newlines[1], newlines[0]
     return(newlines)
 
-def ros(lane, car):
+def ros(lane, car, GO):
     left, right, nl, nr = lane
     left_ans = True if left else False
     right_ans = True if right else False
     new_left = True if nl else False
     new_right = True if nr else False
-    print(str(left_ans) + ", " + str(right_ans) + ", " + str(new_left) + ', ' + str(new_right) + ', ' + led + dis)
-    if not left_ans and right_ans and new_left and new_right:
-    find_right(car)
+    # print(str(left_ans) + ", " + str(right_ans) + ", " + str(new_left) + ', ' + str(new_right))
+    if left_ans and right_ans and new_left and new_right:
+        set_forward(car, GO)
+    elif not left_ans and right_ans and new_left and new_right:
+        find_right(car, GO)
     elif not right_ans and left_ans and new_left and new_right:
-    find_left(car)
+        find_left(car, GO)
     elif not new_left and new_right:
-    rush_left(car)
+        rush_left(car, GO)
     elif not new_right and new_left:
-    rush_right(car)
+        rush_right(car, GO)
     elif not new_left and not new_right:
-    set_slow(car)
+        set_slow(car, GO)
 
-def LEDframe(camera):
+def LEDframe():
     global STOP
-    rawCapture = picamera.array.PiRGBArray(camera, size = im_size)
+    rawCapture = picamera.array.PiRGBArray(camera)
     for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=True):
         image = frame.array
+        print(image.shape)
         image = image.reshape((640, 480, 3))
         rawCapture.truncate(0)
         light = LED_detect(image)
         if light==2:
             STOP = True
-        elif light==1:
+        else:
             STOP = False
-        elif light==0 || light== -1:
-            STOP = False
+        print("light: ", light)
 
-def DISframe(ul):
+def DISframe():
+    global STILL
+    try:
+        while True:
+            dis = round(ul.get_distance(), 2)
+            # print("dis: ", dis)
+            if dis < 20:
+                STILL = True
+            else:
+                STILL = False
+    except KeyboardInterrupt:
+        GPIO.cleanup()
+def ROSframe():
     global STOP
-    while True:
-        dis = round(ul.get_distance(), 2)
-        if dis < 10:
-            STOP = True
-
-def ROSframe(inf, car):
-    global STOP
+    global STILL
     try:
         while True:
             left, right, nl, nr = inf.detect()
-            ros((left, right, nl, nr), car, STOP)
+            GO = (not STOP) and (not STILL)
+            ros((left, right, nl, nr), car, GO)
     except KeyboardInterrupt:
         GPIO.cleanup()
-        
+
 if __name__ == '__main__':
     global STOP
-    car = Car()
-    inf = Infrad()
-    ul = Ultrasound()
-    camera = Picamera()
+    global STILL
+    STOP = False
+    STILL = False
+    t_LED = threading.Thread(target = LEDframe, args=() )
+    t_DIS = threading.Thread(target = DISframe, args=() )
+    t_ROS = threading.Thread(target = ROSframe, args=() )
 
-    t_LED = threading.Thread(target = LEDframe, args=(camera))
-    t_DIS = threading.Thread(target = DISframe, args=(ul))
-    t_ROS = threading.Thread(target = ROSframe, args=(inf, car))
-    threads = [t_LED, t_DIS, t_ROS]
+    threads = [t_ROS, t_LED, t_DIS]
     v1, v2 = 60, 60
     car.set_speed(v1, v2)
-    STOP = false
-    for t in threads:
-        t.start()
+    try:
+        for t in threads:
+            t.start()
+    except KeyboardInterrupt:
+        GPIO.cleanup()
