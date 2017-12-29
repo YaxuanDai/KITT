@@ -23,59 +23,18 @@ from infrad import Infrad
 from lane_lines import *
 from detect import *
 from ultrasonic import *
+from encoder import *
 
 car = Car()
 inf = Infrad()
 ul = Ultrasound()
 camera = PiCamera()
-
-def find_left(car, GO):
-    car.set_speed(-100, 100)
-    time.sleep(0.15)
-    if GO:
-        car.set_speed(50, 50)
-    else:
-        car.set_speed(0, 0)
-
-def find_right(car, GO):
-    car.set_speed(100, -100)
-    time.sleep(0.15)
-    if GO:
-        car.set_speed(50, 50)
-    else:
-        car.set_speed(0, 0)
-
-def rush_left(car, GO):
-    car.set_speed(-200, 200)
-    time.sleep(0.1)
-    if GO:
-        car.set_speed(50, 50)
-    else:
-        car.set_speed(0, 0)
-
-def rush_right(car, GO):
-    car.set_speed(-200, 200)
-    time.sleep(0.2)
-    if GO:
-        car.set_speed(50, 50)
-    else:
-        car.set_speed(0, 0)
-    
-def set_slow(car, GO):
-    car.set_speed(-80, -80)
-    time.sleep(0.25)
-    car.set_speed(-160, 160)
-    time.sleep(0.2)
-    if GO:
-        car.set_speed(50, 50)
-    else:
-        car.set_speed(0, 0)
-
-def set_forward(car, GO):
-    if GO:
-        car.set_speed(50, 50)
-    else:
-        car.set_speed(0, 0)
+encoder= Encoder()
+encoder.command(1)
+speed=0
+#最近10条方向值
+directions=[ 0 for i in range(10) ]
+max_speed=200
 
 def stage_detect(image_in):
     image = filter_colors(image_in)
@@ -107,7 +66,10 @@ def stage_detect(image_in):
         newlines[0], newlines[1] = newlines[1], newlines[0]
     return(newlines)
 
+### PID Controller functions start
+
 def get_direction(left, right, nl, nr):
+    global directions
     result=0
     if(left):
         result=-1
@@ -117,23 +79,46 @@ def get_direction(left, right, nl, nr):
         result=-2
     if(nr):
         result=2
+    directions.pop(0)
+    directions.extend(result)
     return result
 
-def set_controll(correction,car,GO):
-    if -1<correction<1:
-        set_forward(car, GO)
-    elif -2<correction<-1:
-        find_right(car, GO)
-    elif 2>correction>1:
-        find_left(car, GO)
-    elif correction<-2:
-        rush_left(car, GO)
-    elif correction>2:
-        rush_right(car, GO)
-    elif correction<-2 or correction>2:
-        set_slow(car, GO)
+#取得小车运动稳定性,该方法是pid控制速度关键
+def get_instability(speed_left,speed_right):
+    global directions
+    rate=np.std(directions)
+    speed=(speed_left+speed_right)/2
+    if(speed>0):
+        instability=rate/speed
+    else:
+        instability=0
+    return instability
 
-def ros_pid(lane, car, GO):
+def set_speed(correction,car):
+    global speed,max_speed
+    speed=correction
+    if speed>max_speed:
+        speed=max_speed
+    car.set_speed(speed, speed)
+
+def speed_pid(car):
+    pid = pidcontroller.PID(1.0, 0.5, 0.1)
+    target_instability = 0
+    while (True):
+      current_instability = get_instability()
+      error = target_instability - current_instability
+      correction = pid.Update(error)
+      print('Setting the speed to %f' % correction)
+      #set_controll(correction,car,GO)
+      set_speed(correction,car)
+
+def set_speed_different(correction,car):
+    global speed
+    speed_left=speed+correction/2
+    speed_right=speed-correction/2
+    car.set_speed(speed_left,speed_right)
+
+def ros_pid(lane, car):
     pid = pidcontroller.PID(1.0, 0.5, 0.1)
     target_direction = 0  # set forward
     while (True):
@@ -141,27 +126,19 @@ def ros_pid(lane, car, GO):
       error = target_direction - current_direction
       correction = pid.Update(error)
       print('Setting the direction to %f' % correction)
-      set_controll(correction,car,GO)
+      #set_controll(correction,car,GO)
+      set_speed_different(correction,car)
 
-def ros(lane, car, GO):
-    left, right, nl, nr = lane
-    left_ans = True if left else False
-    right_ans = True if right else False
-    new_left = True if nl else False
-    new_right = True if nr else False
-    # print(str(left_ans) + ", " + str(right_ans) + ", " + str(new_left) + ', ' + str(new_right))
-    if left_ans and right_ans and new_left and new_right:
-        set_forward(car, GO)
-    elif not left_ans and right_ans and new_left and new_right:
-        find_right(car, GO)
-    elif not right_ans and left_ans and new_left and new_right:
-        find_left(car, GO)
-    elif not new_left and new_right:
-        rush_left(car, GO)
-    elif not new_right and new_left:
-        rush_right(car, GO)
-    elif not new_left and not new_right:
-        set_slow(car, GO)
+### PID Controller functions end
+
+def SPEEDframe():
+    global encoder
+    try:
+        while True:
+            left_speed, right_speed = encoder.get_speed()
+            speed_pid((left_speed, right_speed), car)
+    except KeyboardInterrupt:
+        GPIO.cleanup()
 
 def LEDframe():
     global STOP
@@ -191,27 +168,27 @@ def DISframe():
     except KeyboardInterrupt:
         GPIO.cleanup()
 def ROSframe():
-    global STOP
-    global STILL
     try:
         while True:
             left, right, nl, nr = inf.detect()
-            GO = (not STOP) and (not STILL)
-            ros_pid((left, right, nl, nr), car, GO)
+            ros_pid((left, right, nl, nr), car)
     except KeyboardInterrupt:
         GPIO.cleanup()
 
 if __name__ == '__main__':
     global STOP
     global STILL
+    global speed,max_speed
     STOP = False
     STILL = False
     t_LED = threading.Thread(target = LEDframe, args=() )
     t_DIS = threading.Thread(target = DISframe, args=() )
     t_ROS = threading.Thread(target = ROSframe, args=() )
+    t_SPEED = threading.Thread(target = SPEEDframe, args=() )
 
     threads = [t_ROS, t_LED, t_DIS]
-    v1, v2 = 60, 60
+    speed=max_speed
+    v1, v2 = speed, speed
     car.set_speed(v1, v2)
     try:
         for t in threads:
